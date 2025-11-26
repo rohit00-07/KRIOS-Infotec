@@ -9,9 +9,9 @@ app = Flask(__name__)
 
 import os
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_API_URL = os.getenv("GROQ_API_URL")
-MODEL = os.getenv("MODEL", "mixtral-8x7b")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
 
 
 PROMPT_TEMPLATE = '''
@@ -28,24 +28,42 @@ Return the most appropriate JSON command for this input.
 '''
 
 
-def call_groq(user_prompt):
+def call_gemini(user_prompt):
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY is not set in environment variables")
+
     prompt = PROMPT_TEMPLATE.format(user_prompt=user_prompt)
+
     headers = {
-    "Authorization": f"Bearer {GROQ_API_KEY}",
-    "Content-Type": "application/json"}
+        "Content-Type": "application/json"
+    }
 
     payload = {
-        "model": MODEL,
-        "messages": [{"role":"user", "content": prompt}],
-        "max_tokens": 600,
-        "temperature": 0
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
     }
-    resp = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=60)
+
+    resp = requests.post(GEMINI_API_URL, headers=headers, json=payload, timeout=60)
     resp.raise_for_status()
     data = resp.json()
-    # Extract model content (adjust based on Groq response shape)
-    content = data['choices'][0]['message']['content']
-    return content
+
+    # Extract model content based on Gemini response shape
+    try:
+        candidates = data.get("candidates", [])
+        if not candidates:
+            raise ValueError(f"No candidates in Gemini response: {data}")
+        parts = candidates[0].get("content", {}).get("parts", [])
+        if not parts:
+            raise ValueError(f"No parts in Gemini candidate: {data}")
+        content = parts[0].get("text", "")
+        return content
+    except Exception as e:
+        raise ValueError(f"Failed to extract text from Gemini response: {e}\nFull response: {data}")
 
 def safe_parse_json(text):
     # Try to find first '{' and parse JSON substring (models sometimes add whitespace)
@@ -64,7 +82,7 @@ def handle_prompt():
     if not user_prompt:
         return jsonify({"error": "No prompt provided"}), 400
 
-    model_output = call_groq(user_prompt)
+    model_output = call_gemini(user_prompt)
     try:
         cmd = safe_parse_json(model_output)
     except ValueError as e:
