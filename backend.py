@@ -1,14 +1,18 @@
 # backend.py
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask, request, jsonify
 import requests, os, json, time
 from automation import open_powerbi, open_pbix, load_csv_into_model, create_bar_chart, refresh_data, apply_filter
 
 app = Flask(__name__)
 
-# ==== CONFIG ====
-GROQ_API_KEY = ""
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "mixtral-8x7b"  # change if needed
+import os
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_URL = os.getenv("GROQ_API_URL")
+MODEL = os.getenv("MODEL", "mixtral-8x7b")
+
 
 PROMPT_TEMPLATE = '''
 You are a JSON command generator for automating Power BI Desktop.
