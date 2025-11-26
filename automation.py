@@ -7,8 +7,9 @@ from pywinauto.application import Application
 from pywinauto.findwindows import ElementNotFoundError
 
 POWERBI_EXE_PATTERNS = [
-    r"C:\Program Files\Microsoft Power BI Desktop\bin\PBIDesktop.exe",
-    r"C:\Program Files\Microsoft Power BI Desktop\bin\PBIDesktop_x64.exe"
+    #r"C:\Program Files\Microsoft Power BI Desktop\bin\PBIDesktop.exe",
+    r"C:\Users\anjal\Downloads\PBIDesktopSetup_x64.exe"
+   
 ]
 
 def find_powerbi_exe():

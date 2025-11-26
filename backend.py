@@ -18,7 +18,7 @@ PROMPT_TEMPLATE = '''
 You are a JSON command generator for automating Power BI Desktop.
 You will only reply in JSON format like this:
 {{
-  "action": "open_power_bi",
+  "action": "open_powerbi",
   "parameters": {{}}
 }}
 
@@ -66,14 +66,29 @@ def call_gemini(user_prompt):
         raise ValueError(f"Failed to extract text from Gemini response: {e}\nFull response: {data}")
 
 def safe_parse_json(text):
-    # Try to find first '{' and parse JSON substring (models sometimes add whitespace)
+    """
+    Clean model output so JSON parses correctly.
+    Removes markdown code fences like ```json … ``` 
+    and strips surrounding whitespace.
+    """
+    clean = text.strip()
+
+    # Remove ```json ... ``` or ``` ... ```
+    if clean.startswith("```"):
+        clean = clean.strip("`")           # remove all backticks
+        clean = clean.replace("json", "", 1).strip()
+
+    # Now extract the JSON object starting from the first '{'
     try:
-        start = text.index('{')
-        json_text = text[start:]
+        start = clean.index('{')
+        json_text = clean[start:]
         obj = json.loads(json_text)
         return obj
     except Exception as e:
-        raise ValueError(f"Failed to parse JSON from model output: {e}\nModel output:\n{text}")
+        raise ValueError(
+            f"Failed to parse JSON from model output: {e}\nModel output:\n{text}"
+        )
+
 
 @app.route("/prompt", methods=["POST"])
 def handle_prompt():
